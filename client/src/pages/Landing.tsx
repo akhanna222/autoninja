@@ -80,6 +80,13 @@ export default function Landing() {
               <span className="mx-2">•</span>
               <span className="flex items-center gap-1"><Car className="w-4 h-4 text-accent" /> Dealer & Private</span>
             </div>
+            <div className="mt-6 pt-4 border-t border-white/10 text-center">
+              <span className="text-white/60 text-sm">New to Carzone? </span>
+              <a href="/api/login" className="text-accent hover:text-accent/80 text-sm font-medium">
+                Sign up for free
+              </a>
+              <span className="text-white/60 text-sm"> to save alerts and list your car</span>
+            </div>
           </motion.div>
         </div>
       </section>
