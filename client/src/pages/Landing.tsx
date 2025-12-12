@@ -1,6 +1,9 @@
 import { motion } from "framer-motion";
-import { ShieldCheck, Car, History, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, Car, History, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Link } from "wouter";
 import heroImage from "@assets/generated_images/modern_luxury_car_in_minimalist_garage.png";
 import shieldImage from "@assets/generated_images/abstract_verification_shield_icon.png";
 
@@ -8,7 +11,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative h-screen w-full overflow-hidden flex items-center justify-center">
+      <section className="relative h-[85vh] w-full overflow-hidden flex items-center justify-center">
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
           <img
@@ -34,22 +37,49 @@ export default function Landing() {
             </p>
           </motion.div>
 
+          {/* Smart Search Card */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="flex flex-col sm:flex-row gap-4"
+            className="w-full max-w-4xl bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-2xl shadow-2xl"
           >
-            <a href="/api/login">
-              <Button size="lg" className="bg-accent hover:bg-accent/90 text-white text-lg px-8 py-6 h-auto">
-                Get Started - It's Free
-              </Button>
-            </a>
-            <a href="/search">
-              <Button size="lg" variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20 text-lg px-8 py-6 h-auto backdrop-blur">
-                Browse Cars
-              </Button>
-            </a>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-5 w-5 text-white/50" />
+                  <Input
+                    placeholder="Search by make, model, or reg..."
+                    className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:ring-accent"
+                  />
+                </div>
+              </div>
+              <div>
+                <Select>
+                  <SelectTrigger className="h-12 bg-white/10 border-white/20 text-white focus:ring-accent">
+                    <SelectValue placeholder="Price Range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10k">Under €10k</SelectItem>
+                    <SelectItem value="20k">€10k - €20k</SelectItem>
+                    <SelectItem value="50k">€20k - €50k</SelectItem>
+                    <SelectItem value="50k+">€50k+</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Link href="/search">
+                <Button className="h-12 w-full bg-accent hover:bg-accent/90 text-white text-lg font-semibold">
+                  Search Cars
+                </Button>
+              </Link>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2 justify-center text-sm text-white/70">
+              <span className="flex items-center gap-1"><ShieldCheck className="w-4 h-4 text-accent" /> Logbook Verified</span>
+              <span className="mx-2">•</span>
+              <span className="flex items-center gap-1"><History className="w-4 h-4 text-accent" /> History Checked</span>
+              <span className="mx-2">•</span>
+              <span className="flex items-center gap-1"><Car className="w-4 h-4 text-accent" /> Dealer & Private</span>
+            </div>
           </motion.div>
         </div>
       </section>
