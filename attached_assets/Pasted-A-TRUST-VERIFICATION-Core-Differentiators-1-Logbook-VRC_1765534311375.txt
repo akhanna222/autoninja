@@ -1,0 +1,370 @@
+A. TRUST & VERIFICATION (Core Differentiators)
+1. Logbook (VRC) Upload & Smart Verification
+
+Upload the Vehicle Registration Certificate (logbook).
+
+Auto-extract:
+
+Registration number
+
+VIN
+
+Owner history count
+
+First registration date
+
+Tax & NCT validity (cross-checked with gov APIs if allowed)
+
+Auto-flag mismatches between:
+
+Logbook data
+
+Seller-entered listing data
+
+Car metadata (make/model/year from reg lookup)
+
+2. Mileage Proof Upload
+
+Seller uploads a recent odometer photo.
+
+System performs:
+
+EXIF metadata extraction
+
+Camera model consistency check
+
+Capture date verification
+
+GPS location match vs seller’s location
+
+Flags mileage photos as:
+
+✅ Fresh (captured within last 7 days)
+
+⚠️ Stale (older than 30 days)
+
+❌ Suspicious (edited / metadata stripped / mismatch)
+
+3. Current Car Photo Verification (Anti-Fraud)
+
+For all photos uploaded:
+
+Extract metadata (EXIF):
+
+Timestamp
+
+GPS
+
+Camera type
+
+Detect:
+
+Old photos (timestamp > 30 days)
+
+Stock photos (same image online — reverse image search)
+
+Manipulated images (AI / photoshop detection)
+
+Auto-flag:
+
+“⚠️ Photos appear older than listing date”
+
+“⚠️ Cannot verify camera metadata”
+
+“❌ Photo appears stock / downloaded from the internet”
+
+4. VIN & Registration Cross-Check
+
+Auto lookup:
+
+Manufacturer
+
+Model
+
+Trim
+
+Engine
+
+CO2 rating
+
+Flags mismatches like:
+
+Wrong model
+
+Wrong year
+
+Wrong fuel type
+
+5. Digital Car Health Passport (Automatically Generated)
+
+Combines:
+
+Verified logbook
+
+Verified photos
+
+Verified mileage
+
+Service records (uploaded by seller or garages)
+
+This becomes a trust badge on listing.
+
+B. BUYER EXPERIENCE (Better Than DoneDeal / Carzone)
+6. Hyper-Smart Search Filters
+
+Exclude specific makes, bad keywords
+
+Filter by verified listings only
+
+Range filters (mileage, year, price)
+
+Filters by:
+
+NCT validity
+
+Tax expiry
+
+Number of owners
+
+Service history completeness
+
+7. Price Estimator / Market Insights
+
+AI that shows:
+
+Real market value range
+
+Overpriced/underpriced indicator
+
+Depreciation trends
+
+"Compare with similar cars" panel.
+
+8. Car History Integration (In-App)
+
+Instead of redirecting to Motorcheck:
+
+Integrated accident/finance checks
+
+One-click history report
+
+Report summary built into listing.
+
+9. Buyer Protection System
+
+Verified dealers
+
+Verified private sellers
+
+In-platform deposit protection
+
+Secure messaging (no WhatsApp scammers)
+
+C. SELLER EXPERIENCE
+10. Guided Listing Creation
+
+AI auto-fills most details from reg number
+
+Photo quality checker (blur, lighting, angles)
+
+Suggests missing required photos:
+
+Dashboard
+
+Odometer
+
+Front/side/back
+
+Tyres
+
+11. Seller Performance Analytics
+
+Shows:
+
+Views
+
+Saves
+
+Inquiry count
+
+Rank vs competitors
+
+Suggested price improvements
+
+Notification when buyer demand increases for your model.
+
+12. Smart Fraud Prevention for Sellers
+
+Flags issues before publishing:
+
+Photos too old
+
+Mileage inconsistencies
+
+Missing logbook
+
+Missing service history
+
+Duplicate listing detected
+
+D. METADATA + AI FEATURES
+13. AI-Powered Description Generator
+
+Seller enters a few lines → AI rewrites:
+
+Professional
+
+Attractive
+
+Honest
+
+14. AI-Powered Defect Detection From Photos
+
+Automatically highlights:
+
+Scratches
+
+Dents
+
+Tyre wear
+
+Windscreen cracks
+
+Dashboard warning lights
+
+15. AI Rating for Listing Quality
+
+Listing receives a score (0–100) based on:
+
+Verification completeness
+
+Photo freshness
+
+Detail accuracy
+
+Price fairness
+
+E. PLATFORM INFRASTRUCTURE FEATURES
+16. Buyer Alerts & Watchlists
+
+Saved searches
+
+Instant push alerts (when matching cars appear)
+
+Price drop alerts
+
+New verified listing alerts
+
+17. Messaging + Negotiation
+
+Secure chat
+
+Offer engine (buyers can send offers)
+
+Auto-schedule test drives
+
+18. Dealer Tools
+
+Bulk upload
+
+Stock management
+
+Dealer ratings
+
+Analytics (performance, demand trends, price heatmaps)
+
+F. SAFETY & FRAUD DETECTION
+19. Full Anti-Fraud Suite
+
+EXIF metadata inspection
+
+Reverse image search
+
+AI detection of synthetic photos
+
+VIN/reg inconsistency alerts
+
+Seller identity verification
+
+Location mismatch detection (photo vs seller IP vs listing area)
+
+20. Behavioural Fraud Signals
+
+Platform watches for:
+
+Repeated listing reposts
+
+Price too low
+
+Seller not verifying logbook
+
+Multiple phones/emails
+
+High message dropout
+
+G. MULTI-SIDE VALUE FEATURES
+21. Pre-Purchase Checklist for Buyers
+
+Automatically generated:
+
+Must-check items (tyres, service stamps, NCT cert)
+
+Estimated future maintenance cost
+
+Common issues for that model
+
+22. Optional Add-Ons
+
+Extended warranty
+
+Finance calculator + instant finance approval
+
+Insurance quotes
+
+NCT booking integration
+
+H. COMMUNITY & CONTENT FEATURES
+23. Seller Reviews (Post-Transaction)
+
+Verified buyer reviews
+
+Rating system
+
+Reputation score
+
+24. Model Guides & AI Advice
+
+Pros & cons of each car model
+
+Running cost estimates
+
+Known issues for each model/year
+
+Real average MPG vs manufacturer claim
+
+The 3 Features You Requested (Summarised Clearly)
+1. Upload Logbook → Auto-Verify → Flag Issues
+
+Extracts data
+
+Compares with seller inputs
+
+Flags mismatches
+
+2. Upload Recent Mileage Photo → metadata check
+
+Ensures it's taken recently
+
+Detects old / edited / suspicious mileage photos
+
+3. Upload Latest Car Photos → metadata + fraud check
+
+Timestamp check
+
+GPS check
+
+Reverse image search
+
+AI forgery detection
+
+Flags old or suspicious images
