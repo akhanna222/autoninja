@@ -9,7 +9,12 @@ import { Label } from "@/components/ui/label";
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from "@/components/ui/select";
-import { ShieldCheck, MapPin, Grid, List, SlidersHorizontal } from "lucide-react";
+import { 
+  Accordion, AccordionContent, AccordionItem, AccordionTrigger 
+} from "@/components/ui/accordion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ShieldCheck, MapPin, Grid, List, SlidersHorizontal, Car, Truck, Bike } from "lucide-react";
 import TrustBadge from "@/components/ui/TrustBadge";
 import { cn } from "@/lib/utils";
 
@@ -64,57 +69,202 @@ export default function Search() {
           
           {/* Filters Sidebar */}
           <div className="space-y-6">
-            <div className="bg-card p-6 rounded-xl border border-border shadow-sm">
-              <div className="flex items-center gap-2 font-bold mb-6 text-lg">
-                <SlidersHorizontal className="w-5 h-5" /> Filters
+            <div className="bg-card p-4 rounded-xl border border-border shadow-sm">
+              <div className="flex items-center gap-2 font-bold mb-4 text-lg">
+                <SlidersHorizontal className="w-5 h-5" /> Refine Search
               </div>
-              
-              <div className="space-y-6">
-                {/* Make & Model */}
-                <div className="space-y-2">
-                  <Label>Make</Label>
-                  <Select>
-                    <SelectTrigger><SelectValue placeholder="Any Make" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Makes</SelectItem>
-                      <SelectItem value="bmw">BMW</SelectItem>
-                      <SelectItem value="audi">Audi</SelectItem>
-                      <SelectItem value="tesla">Tesla</SelectItem>
-                      <SelectItem value="vw">Volkswagen</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
 
-                {/* Price Range */}
-                <div className="space-y-4">
-                  <Label>Price Range (€0 - €100k+)</Label>
-                  <Slider defaultValue={[0, 100]} max={100} step={1} className="py-4" />
-                </div>
+              {/* Vehicle Type Tabs */}
+              <Tabs defaultValue="cars" className="w-full mb-6">
+                <TabsList className="w-full grid grid-cols-3">
+                  <TabsTrigger value="cars" className="flex flex-col h-auto py-2 text-xs gap-1">
+                    <Car className="w-4 h-4" /> Cars
+                  </TabsTrigger>
+                  <TabsTrigger value="commercials" className="flex flex-col h-auto py-2 text-xs gap-1">
+                    <Truck className="w-4 h-4" /> Vans
+                  </TabsTrigger>
+                  <TabsTrigger value="bikes" className="flex flex-col h-auto py-2 text-xs gap-1">
+                    <Bike className="w-4 h-4" /> Bikes
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
 
-                {/* Verification Level */}
-                <div className="space-y-3">
-                  <Label>Verification Level</Label>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="verified" checked />
-                      <Label htmlFor="verified" className="font-normal">Verified Only</Label>
+              <div className="space-y-4 px-1">
+                 {/* Make & Model (Always visible) */}
+                 <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Make</Label>
+                      <Select>
+                        <SelectTrigger><SelectValue placeholder="Any Make" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Makes</SelectItem>
+                          <SelectItem value="bmw">BMW</SelectItem>
+                          <SelectItem value="audi">Audi</SelectItem>
+                          <SelectItem value="tesla">Tesla</SelectItem>
+                          <SelectItem value="vw">Volkswagen</SelectItem>
+                          <SelectItem value="mercedes">Mercedes-Benz</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="logbook" />
-                      <Label htmlFor="logbook" className="font-normal">Logbook Verified</Label>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Model</Label>
+                      <Select>
+                        <SelectTrigger><SelectValue placeholder="Any Model" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="any">Any Model</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="mileage" />
-                      <Label htmlFor="mileage" className="font-normal">Mileage Proven</Label>
-                    </div>
-                  </div>
-                </div>
+                 </div>
 
-                {/* Year */}
-                <div className="space-y-2">
-                  <Label>Year (Min)</Label>
-                  <Input type="number" placeholder="e.g. 2018" />
-                </div>
+                 {/* Price Range (Always visible) */}
+                 <div className="space-y-3 pt-2">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Price</Label>
+                    <div className="flex gap-2">
+                      <Input type="number" placeholder="Min" className="h-9" />
+                      <Input type="number" placeholder="Max" className="h-9" />
+                    </div>
+                 </div>
+                 
+                 {/* Special Badges */}
+                 <div className="space-y-2 py-2">
+                    <div className="flex items-center space-x-2 border p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                      <Checkbox id="history" />
+                      <Label htmlFor="history" className="text-sm font-medium cursor-pointer flex-1">
+                        History Checked
+                        <span className="block text-xs text-muted-foreground font-normal">No finance/accidents</span>
+                      </Label>
+                      <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                    </div>
+                    <div className="flex items-center space-x-2 border p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                      <Checkbox id="aa" />
+                      <Label htmlFor="aa" className="text-sm font-medium cursor-pointer flex-1">
+                        Dealer Approved
+                        <span className="block text-xs text-muted-foreground font-normal">100+ point check</span>
+                      </Label>
+                      <div className="w-4 h-4 bg-yellow-400 rounded-sm" />
+                    </div>
+                 </div>
+
+                 {/* Collapsible Advanced Filters */}
+                 <Accordion type="multiple" defaultValue={["year", "fuel"]} className="w-full">
+                    <AccordionItem value="year">
+                      <AccordionTrigger className="py-2 text-sm font-semibold">Year</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="flex gap-2 pt-1 pb-2">
+                           <Select>
+                             <SelectTrigger className="h-9"><SelectValue placeholder="From" /></SelectTrigger>
+                             <SelectContent>
+                               <SelectItem value="2025">2025</SelectItem>
+                               <SelectItem value="2024">2024</SelectItem>
+                               <SelectItem value="2023">2023</SelectItem>
+                               <SelectItem value="2020">2020</SelectItem>
+                             </SelectContent>
+                           </Select>
+                           <Select>
+                             <SelectTrigger className="h-9"><SelectValue placeholder="To" /></SelectTrigger>
+                             <SelectContent>
+                               <SelectItem value="2025">2025</SelectItem>
+                               <SelectItem value="2024">2024</SelectItem>
+                             </SelectContent>
+                           </Select>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="body">
+                      <AccordionTrigger className="py-2 text-sm font-semibold">Body Type</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-2 pt-1 pb-2">
+                           <div className="flex items-center space-x-2"><Checkbox id="suv" /><Label htmlFor="suv">SUV</Label></div>
+                           <div className="flex items-center space-x-2"><Checkbox id="saloon" /><Label htmlFor="saloon">Saloon</Label></div>
+                           <div className="flex items-center space-x-2"><Checkbox id="hatch" /><Label htmlFor="hatch">Hatchback</Label></div>
+                           <div className="flex items-center space-x-2"><Checkbox id="estate" /><Label htmlFor="estate">Estate</Label></div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="fuel">
+                      <AccordionTrigger className="py-2 text-sm font-semibold">Fuel Type</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-2 pt-1 pb-2">
+                           <div className="flex items-center space-x-2"><Checkbox id="diesel" /><Label htmlFor="diesel">Diesel</Label></div>
+                           <div className="flex items-center space-x-2"><Checkbox id="petrol" /><Label htmlFor="petrol">Petrol</Label></div>
+                           <div className="flex items-center space-x-2"><Checkbox id="hybrid" /><Label htmlFor="hybrid">Hybrid</Label></div>
+                           <div className="flex items-center space-x-2"><Checkbox id="electric" /><Label htmlFor="electric">Electric</Label></div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="engine">
+                      <AccordionTrigger className="py-2 text-sm font-semibold">Engine Size</AccordionTrigger>
+                      <AccordionContent>
+                         <div className="flex gap-2 pt-1 pb-2">
+                           <Select>
+                             <SelectTrigger className="h-9"><SelectValue placeholder="Min (L)" /></SelectTrigger>
+                             <SelectContent>
+                               <SelectItem value="1.0">1.0 L</SelectItem>
+                               <SelectItem value="2.0">2.0 L</SelectItem>
+                             </SelectContent>
+                           </Select>
+                           <Select>
+                             <SelectTrigger className="h-9"><SelectValue placeholder="Max (L)" /></SelectTrigger>
+                             <SelectContent>
+                               <SelectItem value="3.0">3.0 L</SelectItem>
+                               <SelectItem value="5.0">5.0 L</SelectItem>
+                             </SelectContent>
+                           </Select>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                    
+                    <AccordionItem value="mileage">
+                      <AccordionTrigger className="py-2 text-sm font-semibold">Mileage (km)</AccordionTrigger>
+                      <AccordionContent>
+                         <div className="pt-2 pb-4 px-2">
+                            <Slider defaultValue={[150000]} max={300000} step={5000} />
+                            <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                               <span>0 km</span>
+                               <span>150,000 km</span>
+                            </div>
+                         </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                    
+                    <AccordionItem value="transmission">
+                      <AccordionTrigger className="py-2 text-sm font-semibold">Transmission</AccordionTrigger>
+                      <AccordionContent>
+                         <RadioGroup defaultValue="any">
+                            <div className="flex items-center space-x-2"><RadioGroupItem value="any" id="t-any" /><Label htmlFor="t-any">Any</Label></div>
+                            <div className="flex items-center space-x-2"><RadioGroupItem value="auto" id="t-auto" /><Label htmlFor="t-auto">Automatic</Label></div>
+                            <div className="flex items-center space-x-2"><RadioGroupItem value="manual" id="t-manual" /><Label htmlFor="t-manual">Manual</Label></div>
+                         </RadioGroup>
+                      </AccordionContent>
+                    </AccordionItem>
+
+                     <AccordionItem value="color">
+                      <AccordionTrigger className="py-2 text-sm font-semibold">Colour</AccordionTrigger>
+                      <AccordionContent>
+                         <div className="grid grid-cols-5 gap-2 pt-1 pb-2">
+                            <div className="w-6 h-6 rounded-full bg-black border cursor-pointer ring-offset-2 hover:ring-2 ring-primary"></div>
+                            <div className="w-6 h-6 rounded-full bg-white border cursor-pointer ring-offset-2 hover:ring-2 ring-primary"></div>
+                            <div className="w-6 h-6 rounded-full bg-gray-500 border cursor-pointer ring-offset-2 hover:ring-2 ring-primary"></div>
+                            <div className="w-6 h-6 rounded-full bg-blue-600 border cursor-pointer ring-offset-2 hover:ring-2 ring-primary"></div>
+                            <div className="w-6 h-6 rounded-full bg-red-600 border cursor-pointer ring-offset-2 hover:ring-2 ring-primary"></div>
+                         </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                    
+                     <AccordionItem value="seller">
+                      <AccordionTrigger className="py-2 text-sm font-semibold">Seller Type</AccordionTrigger>
+                      <AccordionContent>
+                         <div className="space-y-2 pt-1 pb-2">
+                           <div className="flex items-center space-x-2"><Checkbox id="dealer" /><Label htmlFor="dealer">Trade / Dealer</Label></div>
+                           <div className="flex items-center space-x-2"><Checkbox id="private" /><Label htmlFor="private">Private Seller</Label></div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                 </Accordion>
               </div>
             </div>
           </div>

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 export default function Navbar() {
   const [location] = useLocation();
   const [scrolled, setScrolled] = useState(false);
+  const isHome = location === "/";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -27,8 +28,10 @@ export default function Navbar() {
   return (
     <header
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b border-transparent",
-        scrolled ? "bg-background/80 backdrop-blur-md border-border py-3 shadow-sm" : "bg-transparent py-5"
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b",
+        isHome && !scrolled 
+          ? "bg-transparent border-transparent py-5" 
+          : "bg-background/80 backdrop-blur-md border-border py-3 shadow-sm"
       )}
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
@@ -38,7 +41,10 @@ export default function Navbar() {
             <div className="bg-primary text-white p-1.5 rounded-lg group-hover:bg-accent transition-colors">
               <ShieldCheck className="w-6 h-6" />
             </div>
-            <span className={cn("font-heading font-bold text-xl tracking-tight transition-colors", scrolled ? "text-foreground" : "text-white")}>
+            <span className={cn(
+              "font-heading font-bold text-xl tracking-tight transition-colors", 
+              isHome && !scrolled ? "text-white" : "text-foreground"
+            )}>
               CARZONE
             </span>
           </a>
@@ -51,7 +57,9 @@ export default function Navbar() {
               <a
                 className={cn(
                   "text-sm font-medium transition-colors hover:text-accent",
-                  location === link.href ? "text-accent" : scrolled ? "text-foreground/80" : "text-white/90 hover:text-white"
+                  location === link.href 
+                    ? "text-accent" 
+                    : isHome && !scrolled ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
                 )}
               >
                 {link.label}
@@ -62,10 +70,10 @@ export default function Navbar() {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-4">
-          <Button variant="ghost" size="icon" className={cn("hover:bg-white/10", scrolled ? "text-foreground" : "text-white")}>
+          <Button variant="ghost" size="icon" className={cn("hover:bg-accent/10", isHome && !scrolled ? "text-white hover:bg-white/10" : "text-foreground")}>
             <Search className="w-5 h-5" />
           </Button>
-          <Button variant="ghost" size="icon" className={cn("hover:bg-white/10", scrolled ? "text-foreground" : "text-white")}>
+          <Button variant="ghost" size="icon" className={cn("hover:bg-accent/10", isHome && !scrolled ? "text-white hover:bg-white/10" : "text-foreground")}>
             <User className="w-5 h-5" />
           </Button>
           <Link href="/sell">
@@ -79,7 +87,7 @@ export default function Navbar() {
         <div className="md:hidden">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className={scrolled ? "text-foreground" : "text-white"}>
+              <Button variant="ghost" size="icon" className={isHome && !scrolled ? "text-white" : "text-foreground"}>
                 <Menu className="w-6 h-6" />
               </Button>
             </SheetTrigger>
