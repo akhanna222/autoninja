@@ -376,7 +376,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       
       const messages = await storage.getChatMessages(sessionId);
-      res.json({ session, messages });
+      // Strip sensitive fields from messages
+      const sanitizedMessages = messages.map(m => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        createdAt: m.createdAt,
+      }));
+      res.json({ session: { id: session.id, status: session.status }, messages: sanitizedMessages });
     } catch (error) {
       console.error("Error fetching chat session:", error);
       res.status(500).json({ message: "Failed to fetch chat session" });
@@ -425,11 +432,41 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         cars = await storage.getCars(response.filters);
       }
 
+      // Strip sensitive fields from response
+      const sanitizedMessage = {
+        id: assistantMessage.id,
+        role: assistantMessage.role,
+        content: assistantMessage.content,
+        createdAt: assistantMessage.createdAt,
+      };
+      
+      // Strip sensitive fields from cars (sellerId, etc.)
+      const sanitizedCars = cars.map((car: any) => ({
+        id: car.id,
+        make: car.make,
+        model: car.model,
+        year: car.year,
+        price: car.price,
+        mileage: car.mileage,
+        location: car.location,
+        fuelType: car.fuelType,
+        transmission: car.transmission,
+        imageUrl: car.imageUrl,
+        verificationScore: car.verificationScore,
+        logbookVerified: car.logbookVerified,
+        mileageVerified: car.mileageVerified,
+        photosVerified: car.photosVerified,
+        priceGood: car.priceGood,
+        bodyType: car.bodyType,
+        color: car.color,
+        condition: car.condition,
+      }));
+
       res.json({
-        message: assistantMessage,
+        message: sanitizedMessage,
         filters: response.filters,
         shouldSearch: response.shouldSearch,
-        cars,
+        cars: sanitizedCars,
       });
     } catch (error) {
       console.error("Error processing chat message:", error);
