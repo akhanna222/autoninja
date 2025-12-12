@@ -28,6 +28,7 @@ export default function Navbar() {
     { href: "/alerts", label: "My Alerts" },
   ] : [
     { href: "/search", label: "Buy" },
+    { href: "/sell", label: "Sell" },
   ];
 
   return (

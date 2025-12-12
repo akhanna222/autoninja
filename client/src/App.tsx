@@ -23,6 +23,7 @@ function Router() {
           <Route path="/" component={Landing} />
           <Route path="/search" component={Search} />
           <Route path="/listing/:id" component={Listing} />
+          <Route path="/sell" component={Sell} />
         </>
       ) : (
         <>
