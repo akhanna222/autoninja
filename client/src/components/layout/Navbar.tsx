@@ -2,20 +2,16 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, Menu, Bell, LogOut } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import AuthModal from "@/components/ui/AuthModal";
 
 export default function Navbar() {
   const [location, setLocation] = useLocation();
   const [scrolled, setScrolled] = useState(false);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
   const isHome = location === "/";
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const handleLogout = async () => {
     try {
@@ -85,55 +81,28 @@ export default function Navbar() {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-4">
-          {isAuthenticated ? (
+          {isAuthenticated && (
             <>
               <Link href="/alerts">
                 <Button variant="ghost" size="icon" className={cn("hover:bg-accent/10", isHome && !scrolled ? "text-white hover:bg-white/10" : "text-foreground")}>
                   <Bell className="w-5 h-5" />
                 </Button>
               </Link>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className={cn("rounded-full", isHome && !scrolled ? "hover:bg-white/10" : "")}>
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={user?.profileImageUrl || undefined} />
-                      <AvatarFallback className="bg-accent text-white">
-                        {user?.firstName?.[0] || user?.email?.[0] || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <div className="px-2 py-1.5 text-sm font-medium">
-                    {user?.email}
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/alerts" className="w-full cursor-pointer">
-                      <Bell className="w-4 h-4 mr-2" /> My Alerts
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
-                    <LogOut className="w-4 h-4 mr-2" /> Logout
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
               <Link href="/sell">
                 <Button className="bg-accent hover:bg-accent/90 text-white border-0 font-medium px-6">
                   List Your Car
                 </Button>
               </Link>
-            </>
-          ) : (
-            <>
               <Button 
-                onClick={() => setAuthModalOpen(true)}
-                className="bg-accent hover:bg-accent/90 text-white border-0 font-medium px-6"
+                variant="outline" 
+                onClick={handleLogout}
+                className={cn(
+                  "border-0 font-medium",
+                  isHome && !scrolled ? "text-white hover:bg-white/10" : "text-foreground hover:bg-muted"
+                )}
               >
-                Sign Up / Sign In
+                <LogOut className="w-4 h-4 mr-2" /> Logout
               </Button>
-              <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
             </>
           )}
         </div>
@@ -153,20 +122,13 @@ export default function Navbar() {
                       {link.label}
                   </Link>
                 ))}
-                {isAuthenticated ? (
+                {isAuthenticated && (
                   <>
                     <Link href="/sell">
                       <Button className="w-full bg-accent text-white">List Your Car</Button>
                     </Link>
                     <Button variant="outline" className="w-full" onClick={handleLogout}>Logout</Button>
                   </>
-                ) : (
-                  <Button 
-                    className="w-full bg-accent text-white"
-                    onClick={() => setAuthModalOpen(true)}
-                  >
-                    Sign In
-                  </Button>
                 )}
               </div>
             </SheetContent>
