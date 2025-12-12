@@ -36,8 +36,7 @@ export default function Navbar() {
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/">
-          <a className="flex items-center gap-2 group">
+        <Link href="/" className="flex items-center gap-2 group">
             <div className="bg-primary text-white p-1.5 rounded-lg group-hover:bg-accent transition-colors">
               <ShieldCheck className="w-6 h-6" />
             </div>
@@ -47,23 +46,18 @@ export default function Navbar() {
             )}>
               CARZONE
             </span>
-          </a>
         </Link>
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
-            <Link key={link.href} href={link.href}>
-              <a
-                className={cn(
+            <Link key={link.href} href={link.href} className={cn(
                   "text-sm font-medium transition-colors hover:text-accent",
                   location === link.href 
                     ? "text-accent" 
                     : isHome && !scrolled ? "text-white/90 hover:text-white" : "text-foreground/80 hover:text-foreground"
-                )}
-              >
+                )}>
                 {link.label}
-              </a>
             </Link>
           ))}
         </nav>
@@ -94,10 +88,8 @@ export default function Navbar() {
             <SheetContent>
               <div className="flex flex-col gap-6 mt-10">
                 {navLinks.map((link) => (
-                  <Link key={link.href} href={link.href}>
-                    <a className="text-lg font-medium text-foreground hover:text-accent">
+                  <Link key={link.href} href={link.href} className="text-lg font-medium text-foreground hover:text-accent">
                       {link.label}
-                    </a>
                   </Link>
                 ))}
                 <Link href="/sell">
