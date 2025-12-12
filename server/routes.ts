@@ -1,30 +1,18 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./auth";
 import { insertCarAlertSchema, insertCarSchema } from "@shared/schema";
 import { checkAndNotifyMatches } from "./alertMatcher";
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   // Auth middleware
-  await setupAuth(app);
-
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
+  setupAuth(app);
 
   // User phone number update
   app.patch('/api/user/phone', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId;
       const { phoneNumber } = req.body;
       
       if (!phoneNumber) {
@@ -42,7 +30,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Car Alert routes
   app.get('/api/alerts', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId;
       const alerts = await storage.getUserAlerts(userId);
       res.json(alerts);
     } catch (error) {
@@ -53,7 +41,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post('/api/alerts', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId;
       const alertData = insertCarAlertSchema.parse({ ...req.body, userId });
       
       const alert = await storage.createCarAlert(alertData);
@@ -66,7 +54,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete('/api/alerts/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId;
       const alertId = parseInt(req.params.id);
       
       await storage.deleteCarAlert(alertId, userId);
@@ -79,7 +67,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.patch('/api/alerts/:id/toggle', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId;
       const alertId = parseInt(req.params.id);
       const { isActive } = req.body;
       

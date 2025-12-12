@@ -1,18 +1,29 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, Search, Menu, User, Bell, LogOut } from "lucide-react";
+import { ShieldCheck, Menu, Bell, LogOut } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Navbar() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const isHome = location === "/";
   const { user, isAuthenticated } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await apiRequest("POST", "/api/auth/logout");
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setLocation("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -99,10 +110,8 @@ export default function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <a href="/api/logout" className="w-full cursor-pointer text-destructive">
-                      <LogOut className="w-4 h-4 mr-2" /> Logout
-                    </a>
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
+                    <LogOut className="w-4 h-4 mr-2" /> Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -113,11 +122,11 @@ export default function Navbar() {
               </Link>
             </>
           ) : (
-            <a href="/api/login">
+            <Link href="/auth">
               <Button className="bg-accent hover:bg-accent/90 text-white border-0 font-medium px-6">
                 Sign In
               </Button>
-            </a>
+            </Link>
           )}
         </div>
 
@@ -141,14 +150,12 @@ export default function Navbar() {
                     <Link href="/sell">
                       <Button className="w-full bg-accent text-white">List Your Car</Button>
                     </Link>
-                    <a href="/api/logout">
-                      <Button variant="outline" className="w-full">Logout</Button>
-                    </a>
+                    <Button variant="outline" className="w-full" onClick={handleLogout}>Logout</Button>
                   </>
                 ) : (
-                  <a href="/api/login">
+                  <Link href="/auth">
                     <Button className="w-full bg-accent text-white">Sign In</Button>
-                  </a>
+                  </Link>
                 )}
               </div>
             </SheetContent>

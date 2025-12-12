@@ -25,11 +25,8 @@ export default function MyAlerts() {
 
   const updatePhoneMutation = useMutation({
     mutationFn: async (phone: string) => {
-      return await apiRequest("/api/user/phone", {
-        method: "PATCH",
-        body: JSON.stringify({ phoneNumber: phone }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await apiRequest("PATCH", "/api/user/phone", { phoneNumber: phone });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
@@ -46,7 +43,7 @@ export default function MyAlerts() {
           variant: "destructive",
         });
         setTimeout(() => {
-          window.location.href = "/api/login";
+          window.location.href = "/auth";
         }, 500);
         return;
       }
@@ -60,9 +57,7 @@ export default function MyAlerts() {
 
   const deleteAlertMutation = useMutation({
     mutationFn: async (alertId: number) => {
-      return await apiRequest(`/api/alerts/${alertId}`, {
-        method: "DELETE",
-      });
+      return await apiRequest("DELETE", `/api/alerts/${alertId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
@@ -79,7 +74,7 @@ export default function MyAlerts() {
           variant: "destructive",
         });
         setTimeout(() => {
-          window.location.href = "/api/login";
+          window.location.href = "/auth";
         }, 500);
         return;
       }
@@ -93,11 +88,8 @@ export default function MyAlerts() {
 
   const toggleAlertMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
-      return await apiRequest(`/api/alerts/${id}/toggle`, {
-        method: "PATCH",
-        body: JSON.stringify({ isActive }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await apiRequest("PATCH", `/api/alerts/${id}/toggle`, { isActive });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
@@ -110,7 +102,7 @@ export default function MyAlerts() {
           variant: "destructive",
         });
         setTimeout(() => {
-          window.location.href = "/api/login";
+          window.location.href = "/auth";
         }, 500);
         return;
       }

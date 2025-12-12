@@ -11,6 +11,7 @@ import Search from "@/pages/Search";
 import Listing from "@/pages/Listing";
 import Sell from "@/pages/Sell";
 import MyAlerts from "@/pages/MyAlerts";
+import AuthPage from "@/pages/AuthPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -18,6 +19,7 @@ function Router() {
 
   return (
     <Switch>
+      <Route path="/auth" component={AuthPage} />
       {isLoading || !isAuthenticated ? (
         <>
           <Route path="/" component={Landing} />

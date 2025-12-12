@@ -43,11 +43,8 @@ export default function AlertForm() {
 
   const createAlertMutation = useMutation({
     mutationFn: async (data: AlertFormData) => {
-      return await apiRequest("/api/alerts", {
-        method: "POST",
-        body: JSON.stringify(data),
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await apiRequest("POST", "/api/alerts", data);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
@@ -66,7 +63,7 @@ export default function AlertForm() {
           variant: "destructive",
         });
         setTimeout(() => {
-          window.location.href = "/api/login";
+          window.location.href = "/auth";
         }, 500);
         return;
       }
