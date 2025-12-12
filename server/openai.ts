@@ -1,33 +1,84 @@
 import OpenAI from "openai";
 
-// This is using Replit's AI Integrations service, which provides OpenAI-compatible API access without requiring your own OpenAI API key.
+/**
+ * OpenAI client instance configured for Replit AI Integrations
+ *
+ * This provides OpenAI-compatible API access through Replit's infrastructure,
+ * eliminating the need for a separate OpenAI API key when deployed on Replit.
+ *
+ * @see {@link https://docs.replit.com/hosting/deployments/ai-integrations}
+ */
 const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
 });
 
+/**
+ * Car search filter parameters for filtering database queries
+ */
 export interface CarSearchFilters {
+  /** Car manufacturer (e.g., "BMW", "Toyota") */
   make?: string;
+  /** Car model (e.g., "3 Series", "Camry") */
   model?: string;
+  /** Minimum price in euros */
   minPrice?: number;
+  /** Maximum price in euros */
   maxPrice?: number;
+  /** Minimum year of manufacture */
   minYear?: number;
+  /** Maximum year of manufacture */
   maxYear?: number;
+  /** Fuel type (Petrol, Diesel, Hybrid, Electric) */
   fuelType?: string;
+  /** Transmission type (Manual, Automatic) */
   transmission?: string;
+  /** Maximum mileage in kilometers */
   maxMileage?: number;
+  /** Location/county */
   location?: string;
+  /** Body type (Saloon, SUV, Hatchback, etc.) */
   bodyType?: string;
+  /** Car color */
   color?: string;
 }
 
+/**
+ * Response from AI chat processing including extracted filters and search intent
+ */
 export interface ChatResponse {
+  /** AI-generated message to display to user */
   message: string;
+  /** Extracted and updated search filters */
   filters: CarSearchFilters;
+  /** Whether to execute a car search with current filters */
   shouldSearch: boolean;
 }
 
-// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+/**
+ * Processes natural language car search queries using OpenAI GPT-5
+ *
+ * Analyzes user messages to extract car search criteria and provides
+ * conversational responses while updating search filters progressively.
+ *
+ * @param userMessage - User's natural language search query
+ * @param currentFilters - Currently active search filters
+ * @param conversationHistory - Previous messages for context (up to 10 kept)
+ * @returns Chat response with updated filters and search intent
+ *
+ * @example
+ * ```typescript
+ * const response = await processCarSearchChat(
+ *   "I want a BMW under 20k",
+ *   {},
+ *   []
+ * );
+ * // response.filters = { make: "BMW", maxPrice: 20000 }
+ * // response.shouldSearch = true
+ * ```
+ *
+ * @note Uses GPT-5 (released August 7, 2025) - the newest OpenAI model
+ */
 export async function processCarSearchChat(
   userMessage: string,
   currentFilters: CarSearchFilters,
@@ -94,18 +145,33 @@ Respond in JSON format with:
   }
 }
 
+/**
+ * Vehicle data extracted from logbook/registration documents via OCR
+ */
 export interface LogbookData {
+  /** Vehicle Identification Number (17 characters) */
   vin?: string;
+  /** Registration plate number */
   registrationNumber?: string;
+  /** Car manufacturer */
   make?: string;
+  /** Car model */
   model?: string;
+  /** Year the vehicle was manufactured */
   yearOfManufacture?: number;
+  /** Number of previous owners */
   owners?: number;
+  /** Vehicle color */
   color?: string;
+  /** Engine size in liters (e.g., "2.0") */
   engineSize?: string;
+  /** Fuel type (Petrol, Diesel, etc.) */
   fuelType?: string;
+  /** Transmission type (Manual, Automatic) */
   transmission?: string;
+  /** OCR confidence score from 0-100 */
   confidence?: number;
+  /** Raw JSON response from vision model */
   rawText?: string;
 }
 
