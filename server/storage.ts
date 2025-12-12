@@ -2,15 +2,27 @@ import {
   users,
   carAlerts,
   cars,
+  carImages,
+  carDocuments,
+  buyerChatSessions,
+  buyerChatMessages,
   type User,
   type InsertUser,
   type CarAlert,
   type InsertCarAlert,
   type Car,
   type InsertCar,
+  type CarImage,
+  type InsertCarImage,
+  type CarDocument,
+  type InsertCarDocument,
+  type BuyerChatSession,
+  type InsertBuyerChatSession,
+  type BuyerChatMessage,
+  type InsertBuyerChatMessage,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { eq, and, gte, lte, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -39,8 +51,31 @@ export interface IStorage {
     transmission?: string;
     maxMileage?: number;
     location?: string;
+    bodyType?: string;
+    color?: string;
   }): Promise<Car[]>;
   getCar(id: number): Promise<Car | undefined>;
+  getUserCars(userId: string): Promise<Car[]>;
+  updateCar(id: number, userId: string, data: Partial<InsertCar>): Promise<Car>;
+  deleteCar(id: number, userId: string): Promise<void>;
+
+  // Car Image operations
+  addCarImage(image: InsertCarImage): Promise<CarImage>;
+  getCarImages(carId: number): Promise<CarImage[]>;
+  deleteCarImage(id: number, carId: number): Promise<void>;
+  setPrimaryImage(id: number, carId: number): Promise<void>;
+
+  // Car Document operations
+  addCarDocument(doc: InsertCarDocument): Promise<CarDocument>;
+  getCarDocuments(carId: number): Promise<CarDocument[]>;
+  deleteCarDocument(id: number, userId: string): Promise<void>;
+
+  // Buyer Chat operations
+  createChatSession(session: InsertBuyerChatSession): Promise<BuyerChatSession>;
+  getChatSession(id: number): Promise<BuyerChatSession | undefined>;
+  updateChatFilters(sessionId: number, filters: Record<string, any>): Promise<BuyerChatSession>;
+  addChatMessage(message: InsertBuyerChatMessage): Promise<BuyerChatMessage>;
+  getChatMessages(sessionId: number): Promise<BuyerChatMessage[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -115,6 +150,8 @@ export class DatabaseStorage implements IStorage {
     transmission?: string;
     maxMileage?: number;
     location?: string;
+    bodyType?: string;
+    color?: string;
   }): Promise<Car[]> {
     if (!filters) {
       return await db.select().from(cars);
@@ -132,6 +169,12 @@ export class DatabaseStorage implements IStorage {
     if (filters.transmission) conditions.push(eq(cars.transmission, filters.transmission));
     if (filters.maxMileage) conditions.push(lte(cars.mileage, filters.maxMileage));
     if (filters.location) conditions.push(eq(cars.location, filters.location));
+    if (filters.bodyType) conditions.push(eq(cars.bodyType, filters.bodyType));
+    if (filters.color) conditions.push(eq(cars.color, filters.color));
+
+    if (conditions.length === 0) {
+      return await db.select().from(cars);
+    }
 
     return await db.select().from(cars).where(and(...conditions));
   }
@@ -139,6 +182,95 @@ export class DatabaseStorage implements IStorage {
   async getCar(id: number): Promise<Car | undefined> {
     const [car] = await db.select().from(cars).where(eq(cars.id, id));
     return car;
+  }
+
+  async getUserCars(userId: string): Promise<Car[]> {
+    return await db.select().from(cars).where(eq(cars.sellerId, userId));
+  }
+
+  async updateCar(id: number, userId: string, data: Partial<InsertCar>): Promise<Car> {
+    const [car] = await db
+      .update(cars)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(cars.id, id), eq(cars.sellerId, userId)))
+      .returning();
+    return car;
+  }
+
+  async deleteCar(id: number, userId: string): Promise<void> {
+    await db.delete(cars).where(and(eq(cars.id, id), eq(cars.sellerId, userId)));
+  }
+
+  // Car Image operations
+  async addCarImage(image: InsertCarImage): Promise<CarImage> {
+    const [newImage] = await db.insert(carImages).values(image).returning();
+    return newImage;
+  }
+
+  async getCarImages(carId: number): Promise<CarImage[]> {
+    return await db.select().from(carImages).where(eq(carImages.carId, carId));
+  }
+
+  async deleteCarImage(id: number, carId: number): Promise<void> {
+    await db.delete(carImages).where(
+      and(eq(carImages.id, id), eq(carImages.carId, carId))
+    );
+  }
+
+  async setPrimaryImage(id: number, carId: number): Promise<void> {
+    // First, unset all primary images for this car
+    await db.update(carImages).set({ isPrimary: false }).where(eq(carImages.carId, carId));
+    // Then set the new primary
+    await db.update(carImages).set({ isPrimary: true }).where(eq(carImages.id, id));
+  }
+
+  // Car Document operations
+  async addCarDocument(doc: InsertCarDocument): Promise<CarDocument> {
+    const [newDoc] = await db.insert(carDocuments).values(doc).returning();
+    return newDoc;
+  }
+
+  async getCarDocuments(carId: number): Promise<CarDocument[]> {
+    return await db.select().from(carDocuments).where(eq(carDocuments.carId, carId));
+  }
+
+  async deleteCarDocument(id: number, userId: string): Promise<void> {
+    await db.delete(carDocuments).where(
+      and(eq(carDocuments.id, id), eq(carDocuments.userId, userId))
+    );
+  }
+
+  // Buyer Chat operations
+  async createChatSession(session: InsertBuyerChatSession): Promise<BuyerChatSession> {
+    const [newSession] = await db.insert(buyerChatSessions).values(session).returning();
+    return newSession;
+  }
+
+  async getChatSession(id: number): Promise<BuyerChatSession | undefined> {
+    const [session] = await db.select().from(buyerChatSessions).where(eq(buyerChatSessions.id, id));
+    return session;
+  }
+
+  async updateChatFilters(sessionId: number, filters: Record<string, any>): Promise<BuyerChatSession> {
+    const [session] = await db
+      .update(buyerChatSessions)
+      .set({ activeFilters: filters, updatedAt: new Date() })
+      .where(eq(buyerChatSessions.id, sessionId))
+      .returning();
+    return session;
+  }
+
+  async addChatMessage(message: InsertBuyerChatMessage): Promise<BuyerChatMessage> {
+    const [newMessage] = await db.insert(buyerChatMessages).values(message).returning();
+    return newMessage;
+  }
+
+  async getChatMessages(sessionId: number): Promise<BuyerChatMessage[]> {
+    return await db
+      .select()
+      .from(buyerChatMessages)
+      .where(eq(buyerChatMessages.sessionId, sessionId))
+      .orderBy(buyerChatMessages.createdAt);
   }
 }
 

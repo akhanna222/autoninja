@@ -1,13 +1,63 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import express from "express";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
 import { insertCarAlertSchema, insertCarSchema } from "@shared/schema";
 import { checkAndNotifyMatches } from "./alertMatcher";
+import { processCarSearchChat, type CarSearchFilters } from "./openai";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+// Configure multer for file uploads
+const uploadDir = "./uploads";
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const fileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const type = file.fieldname === 'images' ? 'images' : 'documents';
+    const dir = `${uploadDir}/${type}`;
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: fileStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.fieldname === 'images') {
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files allowed'));
+      }
+    } else {
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only PDF and image files allowed for documents'));
+      }
+    }
+  }
+});
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   // Auth middleware
   setupAuth(app);
+
+  // Serve uploaded files statically
+  app.use('/uploads', express.static(uploadDir));
 
   // User phone number update
   app.patch('/api/user/phone', isAuthenticated, async (req: any, res) => {
@@ -93,6 +143,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         transmission: req.query.transmission as string | undefined,
         maxMileage: req.query.maxMileage ? parseInt(req.query.maxMileage as string) : undefined,
         location: req.query.location as string | undefined,
+        bodyType: req.query.bodyType as string | undefined,
+        color: req.query.color as string | undefined,
       };
       
       const cars = await storage.getCars(filters);
@@ -119,9 +171,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.post('/api/cars', async (req, res) => {
+  // Get user's listed cars
+  app.get('/api/my-cars', isAuthenticated, async (req: any, res) => {
     try {
-      const carData = insertCarSchema.parse(req.body);
+      const userId = req.session.userId;
+      const cars = await storage.getUserCars(userId);
+      res.json(cars);
+    } catch (error) {
+      console.error("Error fetching user cars:", error);
+      res.status(500).json({ message: "Failed to fetch your cars" });
+    }
+  });
+
+  app.post('/api/cars', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const carData = insertCarSchema.parse({ ...req.body, sellerId: userId });
       const car = await storage.createCar(carData);
       
       // Check if this new car matches any active alerts
@@ -131,6 +196,244 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (error: any) {
       console.error("Error creating car:", error);
       res.status(400).json({ message: error.message || "Failed to create car" });
+    }
+  });
+
+  app.put('/api/cars/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const carId = parseInt(req.params.id);
+      const car = await storage.updateCar(carId, userId, req.body);
+      res.json(car);
+    } catch (error) {
+      console.error("Error updating car:", error);
+      res.status(500).json({ message: "Failed to update car" });
+    }
+  });
+
+  app.delete('/api/cars/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const carId = parseInt(req.params.id);
+      await storage.deleteCar(carId, userId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting car:", error);
+      res.status(500).json({ message: "Failed to delete car" });
+    }
+  });
+
+  // Car Images routes
+  app.get('/api/cars/:id/images', async (req, res) => {
+    try {
+      const carId = parseInt(req.params.id);
+      const images = await storage.getCarImages(carId);
+      res.json(images);
+    } catch (error) {
+      console.error("Error fetching car images:", error);
+      res.status(500).json({ message: "Failed to fetch images" });
+    }
+  });
+
+  app.post('/api/cars/:id/images', isAuthenticated, upload.array('images', 10), async (req: any, res) => {
+    try {
+      const carId = parseInt(req.params.id);
+      const userId = req.session.userId;
+      
+      // Verify car ownership
+      const car = await storage.getCar(carId);
+      if (!car || car.sellerId !== userId) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+
+      const files = req.files as Express.Multer.File[];
+      const images = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const imageUrl = `/uploads/images/${file.filename}`;
+        const isPrimary = i === 0 && (await storage.getCarImages(carId)).length === 0;
+        
+        const image = await storage.addCarImage({
+          carId,
+          imageUrl,
+          isPrimary,
+        });
+        images.push(image);
+
+        // Update car's primary image if this is the first
+        if (isPrimary) {
+          await storage.updateCar(carId, userId, { imageUrl });
+        }
+      }
+
+      res.status(201).json(images);
+    } catch (error) {
+      console.error("Error uploading images:", error);
+      res.status(500).json({ message: "Failed to upload images" });
+    }
+  });
+
+  app.delete('/api/cars/:carId/images/:imageId', isAuthenticated, async (req: any, res) => {
+    try {
+      const carId = parseInt(req.params.carId);
+      const imageId = parseInt(req.params.imageId);
+      const userId = req.session.userId;
+
+      // Verify car ownership
+      const car = await storage.getCar(carId);
+      if (!car || car.sellerId !== userId) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+
+      await storage.deleteCarImage(imageId, carId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting image:", error);
+      res.status(500).json({ message: "Failed to delete image" });
+    }
+  });
+
+  // Car Documents routes (logbook, etc.)
+  app.get('/api/cars/:id/documents', async (req, res) => {
+    try {
+      const carId = parseInt(req.params.id);
+      const documents = await storage.getCarDocuments(carId);
+      res.json(documents);
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+      res.status(500).json({ message: "Failed to fetch documents" });
+    }
+  });
+
+  app.post('/api/cars/:id/documents', isAuthenticated, upload.single('document'), async (req: any, res) => {
+    try {
+      const carId = parseInt(req.params.id);
+      const userId = req.session.userId;
+      const { docType } = req.body;
+
+      // Verify car ownership
+      const car = await storage.getCar(carId);
+      if (!car || car.sellerId !== userId) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+
+      const file = req.file as Express.Multer.File;
+      const fileUrl = `/uploads/documents/${file.filename}`;
+
+      const document = await storage.addCarDocument({
+        carId,
+        userId,
+        docType: docType || 'logbook',
+        fileName: file.originalname,
+        fileUrl,
+      });
+
+      // If logbook uploaded, mark as verified
+      if (docType === 'logbook') {
+        await storage.updateCar(carId, userId, { logbookVerified: true });
+      }
+
+      res.status(201).json(document);
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      res.status(500).json({ message: "Failed to upload document" });
+    }
+  });
+
+  app.delete('/api/documents/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const docId = parseInt(req.params.id);
+      const userId = req.session.userId;
+
+      await storage.deleteCarDocument(docId, userId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      res.status(500).json({ message: "Failed to delete document" });
+    }
+  });
+
+  // Buyer Voice Chat routes
+  app.post('/api/chat/session', async (req: any, res) => {
+    try {
+      const userId = req.session?.userId || null;
+      const session = await storage.createChatSession({ userId, activeFilters: {}, status: 'active' });
+      res.status(201).json(session);
+    } catch (error) {
+      console.error("Error creating chat session:", error);
+      res.status(500).json({ message: "Failed to create chat session" });
+    }
+  });
+
+  app.get('/api/chat/session/:id', async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const session = await storage.getChatSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      const messages = await storage.getChatMessages(sessionId);
+      res.json({ session, messages });
+    } catch (error) {
+      console.error("Error fetching chat session:", error);
+      res.status(500).json({ message: "Failed to fetch chat session" });
+    }
+  });
+
+  app.post('/api/chat/session/:id/message', async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const { content, isVoice, transcriptText } = req.body;
+
+      const session = await storage.getChatSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      // Save user message
+      await storage.addChatMessage({
+        sessionId,
+        role: 'user',
+        content: transcriptText || content,
+        transcriptText: isVoice ? transcriptText : null,
+      });
+
+      // Get conversation history
+      const messages = await storage.getChatMessages(sessionId);
+      const history = messages.map(m => ({ role: m.role, content: m.content }));
+
+      // Process with OpenAI
+      const currentFilters = (session.activeFilters || {}) as CarSearchFilters;
+      const response = await processCarSearchChat(content, currentFilters, history);
+
+      // Update session filters
+      await storage.updateChatFilters(sessionId, response.filters);
+
+      // Save assistant message
+      const assistantMessage = await storage.addChatMessage({
+        sessionId,
+        role: 'assistant',
+        content: response.message,
+      });
+
+      // If should search, get cars with current filters
+      let cars: any[] = [];
+      if (response.shouldSearch) {
+        cars = await storage.getCars(response.filters);
+      }
+
+      res.json({
+        message: assistantMessage,
+        filters: response.filters,
+        shouldSearch: response.shouldSearch,
+        cars,
+      });
+    } catch (error) {
+      console.error("Error processing chat message:", error);
+      res.status(500).json({ message: "Failed to process message" });
     }
   });
 

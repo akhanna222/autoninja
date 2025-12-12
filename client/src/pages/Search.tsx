@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { mockCars } from "@/lib/mockData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -14,12 +13,55 @@ import {
 } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ShieldCheck, MapPin, Grid, List, SlidersHorizontal, Car, Truck, Bike } from "lucide-react";
+import { ShieldCheck, MapPin, Grid, List, SlidersHorizontal, Car, Truck, Bike, Loader2 } from "lucide-react";
 import TrustBadge from "@/components/ui/TrustBadge";
+import VoiceChatDrawer from "@/components/VoiceChatDrawer";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { mockCars } from "@/lib/mockData";
+
+interface CarFilters {
+  make?: string;
+  model?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minYear?: number;
+  maxYear?: number;
+  fuelType?: string;
+  transmission?: string;
+  maxMileage?: number;
+}
 
 export default function Search() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [filters, setFilters] = useState<CarFilters>({});
+  const [chatCars, setChatCars] = useState<any[] | null>(null);
+
+  const { data: apiCars = [], isLoading } = useQuery({
+    queryKey: ['/api/cars', filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          params.append(key, String(value));
+        }
+      });
+      const res = await fetch(`/api/cars?${params}`);
+      return res.json();
+    }
+  });
+
+  // Use chat-found cars if available, otherwise API cars, fallback to mock
+  const displayCars = chatCars || (apiCars.length > 0 ? apiCars : mockCars);
+
+  const handleFiltersFromChat = (newFilters: Record<string, any>) => {
+    setFilters(newFilters);
+    setChatCars(null); // Clear chat cars to use filtered API results
+  };
+
+  const handleCarsFromChat = (cars: any[]) => {
+    setChatCars(cars);
+  };
 
   return (
     <div className="min-h-screen bg-muted/10 pt-24 pb-12">
@@ -29,7 +71,9 @@ export default function Search() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-heading font-bold">Search Results</h1>
-            <p className="text-muted-foreground">Showing {mockCars.length} verified listings</p>
+            <p className="text-muted-foreground">
+              {isLoading ? "Loading..." : `Showing ${displayCars.length} verified listings`}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Select defaultValue="relevance">
@@ -274,7 +318,17 @@ export default function Search() {
             "lg:col-span-3 grid gap-6",
             viewMode === "grid" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
           )}>
-            {mockCars.map((car) => (
+            {isLoading ? (
+              <div className="col-span-full flex items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-accent" />
+              </div>
+            ) : displayCars.length === 0 ? (
+              <div className="col-span-full text-center py-20">
+                <Car className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No cars found matching your criteria</p>
+              </div>
+            ) : null}
+            {displayCars.map((car: any) => (
               <Link key={car.id} href={`/listing/${car.id}`}>
                 <div className={cn(
                   "group bg-card rounded-xl overflow-hidden border border-border hover:border-accent/50 hover:shadow-lg transition-all duration-300 cursor-pointer flex",
@@ -315,9 +369,9 @@ export default function Search() {
                       )}
 
                       <div className="flex flex-wrap gap-2 mb-4">
-                        <TrustBadge type="logbook" verified={car.badges.logbookVerified} showLabel={true} />
-                        <TrustBadge type="mileage" verified={car.badges.mileageVerified} showLabel={viewMode === "list"} />
-                        <TrustBadge type="photos" verified={car.badges.photosVerified} showLabel={viewMode === "list"} />
+                        <TrustBadge type="logbook" verified={car.logbookVerified || car.badges?.logbookVerified} showLabel={true} />
+                        <TrustBadge type="mileage" verified={car.mileageVerified || car.badges?.mileageVerified} showLabel={viewMode === "list"} />
+                        <TrustBadge type="photos" verified={car.photosVerified || car.badges?.photosVerified} showLabel={viewMode === "list"} />
                       </div>
                     </div>
 
@@ -345,6 +399,12 @@ export default function Search() {
           </div>
         </div>
       </div>
+
+      {/* Voice Chat Assistant */}
+      <VoiceChatDrawer 
+        onFiltersChange={handleFiltersFromChat}
+        onCarsFound={handleCarsFromChat}
+      />
     </div>
   );
 }

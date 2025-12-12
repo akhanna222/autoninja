@@ -65,10 +65,7 @@ export const carAlerts = pgTable("car_alerts", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertCarAlertSchema = createInsertSchema(carAlerts, {
-  notifyViaWhatsApp: z.boolean().optional(),
-  isActive: z.boolean().optional(),
-}).omit({
+export const insertCarAlertSchema = createInsertSchema(carAlerts).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -80,6 +77,7 @@ export type CarAlert = typeof carAlerts.$inferSelect;
 // Cars table - the actual car listings
 export const cars = pgTable("cars", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  sellerId: varchar("seller_id").references(() => users.id, { onDelete: 'cascade' }),
   make: varchar("make").notNull(),
   model: varchar("model").notNull(),
   year: integer("year").notNull(),
@@ -88,6 +86,11 @@ export const cars = pgTable("cars", {
   location: varchar("location").notNull(),
   fuelType: varchar("fuel_type").notNull(),
   transmission: varchar("transmission").notNull(),
+  title: varchar("title"),
+  description: text("description"),
+  bodyType: varchar("body_type"),
+  color: varchar("color"),
+  condition: varchar("condition"),
   imageUrl: text("image_url"),
   verificationScore: integer("verification_score").default(0),
   logbookVerified: boolean("logbook_verified").default(false),
@@ -102,14 +105,7 @@ export const cars = pgTable("cars", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertCarSchema = createInsertSchema(cars, {
-  logbookVerified: z.boolean().optional(),
-  mileageVerified: z.boolean().optional(),
-  photosVerified: z.boolean().optional(),
-  priceGood: z.boolean().optional(),
-  accidents: z.boolean().optional(),
-  finance: z.boolean().optional(),
-}).omit({
+export const insertCarSchema = createInsertSchema(cars).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -117,3 +113,63 @@ export const insertCarSchema = createInsertSchema(cars, {
 
 export type InsertCar = z.infer<typeof insertCarSchema>;
 export type Car = typeof cars.$inferSelect;
+
+// Car Images table - multiple images per car
+export const carImages = pgTable("car_images", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  carId: integer("car_id").notNull().references(() => cars.id, { onDelete: 'cascade' }),
+  imageUrl: text("image_url").notNull(),
+  isPrimary: boolean("is_primary").default(false),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
+});
+
+export const insertCarImageSchema = createInsertSchema(carImages).omit({ id: true });
+
+export type InsertCarImage = z.infer<typeof insertCarImageSchema>;
+export type CarImage = typeof carImages.$inferSelect;
+
+// Car Documents table - logbook and other documents per car
+export const carDocuments = pgTable("car_documents", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  carId: integer("car_id").notNull().references(() => cars.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  docType: varchar("doc_type").notNull(), // 'logbook', 'service_record', 'inspection_report'
+  fileName: varchar("file_name").notNull(),
+  fileUrl: text("file_url").notNull(),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
+});
+
+export const insertCarDocumentSchema = createInsertSchema(carDocuments).omit({ id: true });
+
+export type InsertCarDocument = z.infer<typeof insertCarDocumentSchema>;
+export type CarDocument = typeof carDocuments.$inferSelect;
+
+// Buyer Chat Sessions - tracks voice/text conversations
+export const buyerChatSessions = pgTable("buyer_chat_sessions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  activeFilters: jsonb("active_filters").default({}),
+  status: varchar("status").default("active"), // 'active', 'completed'
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertBuyerChatSessionSchema = createInsertSchema(buyerChatSessions).omit({ id: true });
+
+export type InsertBuyerChatSession = z.infer<typeof insertBuyerChatSessionSchema>;
+export type BuyerChatSession = typeof buyerChatSessions.$inferSelect;
+
+// Buyer Chat Messages - individual messages in a session
+export const buyerChatMessages = pgTable("buyer_chat_messages", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  sessionId: integer("session_id").notNull().references(() => buyerChatSessions.id, { onDelete: 'cascade' }),
+  role: varchar("role").notNull(), // 'user', 'assistant'
+  content: text("content").notNull(),
+  transcriptText: text("transcript_text"), // For voice messages - the transcription
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertBuyerChatMessageSchema = createInsertSchema(buyerChatMessages).omit({ id: true });
+
+export type InsertBuyerChatMessage = z.infer<typeof insertBuyerChatMessageSchema>;
+export type BuyerChatMessage = typeof buyerChatMessages.$inferSelect;
