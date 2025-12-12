@@ -170,6 +170,21 @@ export default function Sell() {
     },
   });
 
+  const checkoutMutation = useMutation({
+    mutationFn: async ({ priceId, carId }: { priceId: string; carId?: number }) => {
+      const res = await apiRequest("POST", "/api/stripe/checkout", { priceId, carId });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to start checkout. Please try again.", variant: "destructive" });
+    },
+  });
+
   const handleNext = async () => {
     if (step === 1) {
       if (!formData.make || !formData.model || !formData.year || !formData.mileage) {
@@ -773,7 +788,7 @@ export default function Sell() {
                 </div>
 
                 <p className="text-sm text-muted-foreground mb-6">
-                  Stripe integration coming soon. Your listing will be saved as a draft.
+                  You'll be redirected to Stripe's secure checkout to complete payment.
                 </p>
 
                 <div className="flex gap-4">
@@ -782,13 +797,20 @@ export default function Sell() {
                   </Button>
                   <Button 
                     onClick={() => {
-                      toast({ title: "Coming Soon", description: "Stripe payment integration is being set up" });
-                      setLocation("/search");
+                      checkoutMutation.mutate({ 
+                        priceId: "price_1SdV3M2SClcbQfzFwAslyj0H",
+                        carId: createdCarId || undefined
+                      });
                     }}
+                    disabled={checkoutMutation.isPending}
                     className="flex-1 h-12 bg-accent hover:bg-accent/90"
                     data-testid="button-pay"
                   >
-                    <CreditCard className="w-5 h-5 mr-2" /> Pay €9.99
+                    {checkoutMutation.isPending ? (
+                      <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Processing...</>
+                    ) : (
+                      <><CreditCard className="w-5 h-5 mr-2" /> Pay €9.99</>
+                    )}
                   </Button>
                 </div>
               </Card>

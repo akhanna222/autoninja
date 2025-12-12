@@ -6,6 +6,8 @@ import { setupAuth, isAuthenticated } from "./auth";
 import { insertCarAlertSchema, insertCarSchema } from "@shared/schema";
 import { checkAndNotifyMatches } from "./alertMatcher";
 import { processCarSearchChat, type CarSearchFilters } from "./openai";
+import { stripeService } from "./stripeService";
+import { getStripePublishableKey } from "./stripeClient";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -351,6 +353,129 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (error) {
       console.error("Error deleting document:", error);
       res.status(500).json({ message: "Failed to delete document" });
+    }
+  });
+
+  // Stripe routes
+  app.get('/api/stripe/config', async (req, res) => {
+    try {
+      const publishableKey = await getStripePublishableKey();
+      res.json({ publishableKey });
+    } catch (error) {
+      console.error("Error getting Stripe config:", error);
+      res.status(500).json({ message: "Failed to get Stripe configuration" });
+    }
+  });
+
+  app.get('/api/stripe/products', async (req, res) => {
+    try {
+      const rows = await storage.listStripeProductsWithPrices();
+      
+      // Group prices by product
+      const productsMap = new Map();
+      for (const row of rows as any[]) {
+        if (!productsMap.has(row.product_id)) {
+          productsMap.set(row.product_id, {
+            id: row.product_id,
+            name: row.product_name,
+            description: row.product_description,
+            active: row.product_active,
+            metadata: row.product_metadata,
+            prices: []
+          });
+        }
+        if (row.price_id) {
+          productsMap.get(row.product_id).prices.push({
+            id: row.price_id,
+            unit_amount: row.unit_amount,
+            currency: row.currency,
+            recurring: row.recurring,
+            active: row.price_active,
+          });
+        }
+      }
+
+      res.json({ data: Array.from(productsMap.values()) });
+    } catch (error) {
+      console.error("Error listing products:", error);
+      res.status(500).json({ message: "Failed to list products" });
+    }
+  });
+
+  app.post('/api/stripe/checkout', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { priceId, carId } = req.body;
+      if (!priceId) {
+        return res.status(400).json({ message: "Price ID is required" });
+      }
+
+      // Create or get Stripe customer
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripeService.createCustomer(user.email, user.id);
+        await storage.updateUserStripeInfo(user.id, { stripeCustomerId: customer.id });
+        customerId = customer.id;
+      }
+
+      // Create checkout session
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const session = await stripeService.createCheckoutSession(
+        customerId,
+        priceId,
+        `${baseUrl}/sell/success?session_id={CHECKOUT_SESSION_ID}`,
+        `${baseUrl}/sell?cancelled=true`,
+        carId ? { carId: String(carId), userId } : { userId }
+      );
+
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+      res.status(500).json({ message: "Failed to create checkout session" });
+    }
+  });
+
+  app.get('/api/stripe/subscription', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.stripeSubscriptionId) {
+        return res.json({ subscription: null });
+      }
+
+      const subscription = await storage.getStripeSubscription(user.stripeSubscriptionId);
+      res.json({ subscription });
+    } catch (error) {
+      console.error("Error getting subscription:", error);
+      res.status(500).json({ message: "Failed to get subscription" });
+    }
+  });
+
+  app.post('/api/stripe/portal', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const user = await storage.getUser(userId);
+
+      if (!user?.stripeCustomerId) {
+        return res.status(400).json({ message: "No Stripe customer found" });
+      }
+
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const session = await stripeService.createCustomerPortalSession(
+        user.stripeCustomerId,
+        `${baseUrl}/account`
+      );
+
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error("Error creating portal session:", error);
+      res.status(500).json({ message: "Failed to create portal session" });
     }
   });
 
