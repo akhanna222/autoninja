@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,36 +32,77 @@ interface CarFilters {
   maxMileage?: number;
 }
 
+// Debounce hook for optimizing search performance
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export default function Search() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filters, setFilters] = useState<CarFilters>({});
   const [chatCars, setChatCars] = useState<any[] | null>(null);
+  const [sortBy, setSortBy] = useState<string>("relevance");
 
-  const { data: apiCars = [], isLoading } = useQuery({
-    queryKey: ['/api/cars', filters],
+  // Debounce filters to avoid excessive API calls
+  const debouncedFilters = useDebounce(filters, 500);
+
+  const { data: apiCars = [], isLoading, error } = useQuery({
+    queryKey: ['/api/cars', debouncedFilters],
     queryFn: async () => {
       const params = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
+      Object.entries(debouncedFilters).forEach(([key, value]) => {
         if (value !== undefined && value !== '') {
           params.append(key, String(value));
         }
       });
       const res = await fetch(`/api/cars?${params}`);
+      if (!res.ok) throw new Error('Failed to fetch cars');
       return res.json();
-    }
+    },
+    retry: 2,
+    staleTime: 60000, // Cache for 1 minute
   });
 
   // Use chat-found cars if available, otherwise API cars, fallback to mock
   const displayCars = chatCars || (apiCars.length > 0 ? apiCars : mockCars);
 
-  const handleFiltersFromChat = (newFilters: Record<string, any>) => {
+  // Sort cars based on selected sort option
+  const sortedCars = useMemo(() => {
+    const sorted = [...displayCars];
+    switch (sortBy) {
+      case 'price_asc':
+        return sorted.sort((a, b) => a.price - b.price);
+      case 'price_desc':
+        return sorted.sort((a, b) => b.price - a.price);
+      case 'newest':
+        return sorted.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      case 'verified':
+        return sorted.sort((a, b) => (b.verificationScore || 0) - (a.verificationScore || 0));
+      default:
+        return sorted;
+    }
+  }, [displayCars, sortBy]);
+
+  const handleFiltersFromChat = useCallback((newFilters: Record<string, any>) => {
     setFilters(newFilters);
     setChatCars(null); // Clear chat cars to use filtered API results
-  };
+  }, []);
 
-  const handleCarsFromChat = (cars: any[]) => {
+  const handleCarsFromChat = useCallback((cars: any[]) => {
     setChatCars(cars);
-  };
+  }, []);
 
   return (
     <div className="min-h-screen bg-muted/10 pt-24 pb-12">
@@ -76,7 +117,7 @@ export default function Search() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Select defaultValue="relevance">
+            <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-[180px] bg-background">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
@@ -138,26 +179,32 @@ export default function Search() {
                  <div className="space-y-3">
                     <div className="space-y-1.5">
                       <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Make</Label>
-                      <Select>
+                      <Select
+                        value={filters.make || "all"}
+                        onValueChange={(v) => setFilters(prev => ({ ...prev, make: v === "all" ? undefined : v }))}
+                      >
                         <SelectTrigger><SelectValue placeholder="Any Make" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Makes</SelectItem>
-                          <SelectItem value="bmw">BMW</SelectItem>
-                          <SelectItem value="audi">Audi</SelectItem>
-                          <SelectItem value="tesla">Tesla</SelectItem>
-                          <SelectItem value="vw">Volkswagen</SelectItem>
-                          <SelectItem value="mercedes">Mercedes-Benz</SelectItem>
+                          <SelectItem value="BMW">BMW</SelectItem>
+                          <SelectItem value="Audi">Audi</SelectItem>
+                          <SelectItem value="Tesla">Tesla</SelectItem>
+                          <SelectItem value="Volkswagen">Volkswagen</SelectItem>
+                          <SelectItem value="Mercedes-Benz">Mercedes-Benz</SelectItem>
+                          <SelectItem value="Toyota">Toyota</SelectItem>
+                          <SelectItem value="Honda">Honda</SelectItem>
+                          <SelectItem value="Ford">Ford</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Model</Label>
-                      <Select>
-                        <SelectTrigger><SelectValue placeholder="Any Model" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="any">Any Model</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        placeholder="Any Model"
+                        value={filters.model || ""}
+                        onChange={(e) => setFilters(prev => ({ ...prev, model: e.target.value || undefined }))}
+                        className="h-9"
+                      />
                     </div>
                  </div>
 
@@ -165,8 +212,20 @@ export default function Search() {
                  <div className="space-y-3 pt-2">
                     <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Price</Label>
                     <div className="flex gap-2">
-                      <Input type="number" placeholder="Min" className="h-9" />
-                      <Input type="number" placeholder="Max" className="h-9" />
+                      <Input
+                        type="number"
+                        placeholder="Min"
+                        className="h-9"
+                        value={filters.minPrice || ""}
+                        onChange={(e) => setFilters(prev => ({ ...prev, minPrice: e.target.value ? parseInt(e.target.value) : undefined }))}
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Max"
+                        className="h-9"
+                        value={filters.maxPrice || ""}
+                        onChange={(e) => setFilters(prev => ({ ...prev, maxPrice: e.target.value ? parseInt(e.target.value) : undefined }))}
+                      />
                     </div>
                  </div>
                  
@@ -196,20 +255,39 @@ export default function Search() {
                       <AccordionTrigger className="py-2 text-sm font-semibold">Year</AccordionTrigger>
                       <AccordionContent>
                         <div className="flex gap-2 pt-1 pb-2">
-                           <Select>
+                           <Select
+                             value={filters.minYear?.toString() || "any"}
+                             onValueChange={(v) => setFilters(prev => ({ ...prev, minYear: v === "any" ? undefined : parseInt(v) }))}
+                           >
                              <SelectTrigger className="h-9"><SelectValue placeholder="From" /></SelectTrigger>
                              <SelectContent>
+                               <SelectItem value="any">Any</SelectItem>
                                <SelectItem value="2025">2025</SelectItem>
                                <SelectItem value="2024">2024</SelectItem>
                                <SelectItem value="2023">2023</SelectItem>
+                               <SelectItem value="2022">2022</SelectItem>
+                               <SelectItem value="2021">2021</SelectItem>
                                <SelectItem value="2020">2020</SelectItem>
+                               <SelectItem value="2019">2019</SelectItem>
+                               <SelectItem value="2018">2018</SelectItem>
+                               <SelectItem value="2017">2017</SelectItem>
+                               <SelectItem value="2016">2016</SelectItem>
+                               <SelectItem value="2015">2015</SelectItem>
                              </SelectContent>
                            </Select>
-                           <Select>
+                           <Select
+                             value={filters.maxYear?.toString() || "any"}
+                             onValueChange={(v) => setFilters(prev => ({ ...prev, maxYear: v === "any" ? undefined : parseInt(v) }))}
+                           >
                              <SelectTrigger className="h-9"><SelectValue placeholder="To" /></SelectTrigger>
                              <SelectContent>
+                               <SelectItem value="any">Any</SelectItem>
                                <SelectItem value="2025">2025</SelectItem>
                                <SelectItem value="2024">2024</SelectItem>
+                               <SelectItem value="2023">2023</SelectItem>
+                               <SelectItem value="2022">2022</SelectItem>
+                               <SelectItem value="2021">2021</SelectItem>
+                               <SelectItem value="2020">2020</SelectItem>
                              </SelectContent>
                            </Select>
                         </div>
@@ -231,12 +309,16 @@ export default function Search() {
                     <AccordionItem value="fuel">
                       <AccordionTrigger className="py-2 text-sm font-semibold">Fuel Type</AccordionTrigger>
                       <AccordionContent>
-                        <div className="space-y-2 pt-1 pb-2">
-                           <div className="flex items-center space-x-2"><Checkbox id="diesel" /><Label htmlFor="diesel">Diesel</Label></div>
-                           <div className="flex items-center space-x-2"><Checkbox id="petrol" /><Label htmlFor="petrol">Petrol</Label></div>
-                           <div className="flex items-center space-x-2"><Checkbox id="hybrid" /><Label htmlFor="hybrid">Hybrid</Label></div>
-                           <div className="flex items-center space-x-2"><Checkbox id="electric" /><Label htmlFor="electric">Electric</Label></div>
-                        </div>
+                        <RadioGroup
+                          value={filters.fuelType || "any"}
+                          onValueChange={(v) => setFilters(prev => ({ ...prev, fuelType: v === "any" ? undefined : v }))}
+                        >
+                           <div className="flex items-center space-x-2"><RadioGroupItem value="any" id="fuel-any" /><Label htmlFor="fuel-any">Any</Label></div>
+                           <div className="flex items-center space-x-2"><RadioGroupItem value="Diesel" id="diesel" /><Label htmlFor="diesel">Diesel</Label></div>
+                           <div className="flex items-center space-x-2"><RadioGroupItem value="Petrol" id="petrol" /><Label htmlFor="petrol">Petrol</Label></div>
+                           <div className="flex items-center space-x-2"><RadioGroupItem value="Hybrid" id="hybrid" /><Label htmlFor="hybrid">Hybrid</Label></div>
+                           <div className="flex items-center space-x-2"><RadioGroupItem value="Electric" id="electric" /><Label htmlFor="electric">Electric</Label></div>
+                        </RadioGroup>
                       </AccordionContent>
                     </AccordionItem>
 
@@ -266,10 +348,15 @@ export default function Search() {
                       <AccordionTrigger className="py-2 text-sm font-semibold">Mileage (km)</AccordionTrigger>
                       <AccordionContent>
                          <div className="pt-2 pb-4 px-2">
-                            <Slider defaultValue={[150000]} max={300000} step={5000} />
+                            <Slider
+                              defaultValue={[filters.maxMileage || 150000]}
+                              max={300000}
+                              step={5000}
+                              onValueChange={(values) => setFilters(prev => ({ ...prev, maxMileage: values[0] }))}
+                            />
                             <div className="flex justify-between mt-2 text-xs text-muted-foreground">
                                <span>0 km</span>
-                               <span>150,000 km</span>
+                               <span>{(filters.maxMileage || 150000).toLocaleString()} km</span>
                             </div>
                          </div>
                       </AccordionContent>
@@ -278,10 +365,13 @@ export default function Search() {
                     <AccordionItem value="transmission">
                       <AccordionTrigger className="py-2 text-sm font-semibold">Transmission</AccordionTrigger>
                       <AccordionContent>
-                         <RadioGroup defaultValue="any">
+                         <RadioGroup
+                           value={filters.transmission || "any"}
+                           onValueChange={(v) => setFilters(prev => ({ ...prev, transmission: v === "any" ? undefined : v }))}
+                         >
                             <div className="flex items-center space-x-2"><RadioGroupItem value="any" id="t-any" /><Label htmlFor="t-any">Any</Label></div>
-                            <div className="flex items-center space-x-2"><RadioGroupItem value="auto" id="t-auto" /><Label htmlFor="t-auto">Automatic</Label></div>
-                            <div className="flex items-center space-x-2"><RadioGroupItem value="manual" id="t-manual" /><Label htmlFor="t-manual">Manual</Label></div>
+                            <div className="flex items-center space-x-2"><RadioGroupItem value="Automatic" id="t-auto" /><Label htmlFor="t-auto">Automatic</Label></div>
+                            <div className="flex items-center space-x-2"><RadioGroupItem value="Manual" id="t-manual" /><Label htmlFor="t-manual">Manual</Label></div>
                          </RadioGroup>
                       </AccordionContent>
                     </AccordionItem>
@@ -322,13 +412,19 @@ export default function Search() {
               <div className="col-span-full flex items-center justify-center py-20">
                 <Loader2 className="h-8 w-8 animate-spin text-accent" />
               </div>
-            ) : displayCars.length === 0 ? (
+            ) : error ? (
+              <div className="col-span-full text-center py-20">
+                <Car className="h-12 w-12 mx-auto text-red-500 mb-4" />
+                <p className="text-red-500 font-semibold mb-2">Failed to load cars</p>
+                <p className="text-muted-foreground text-sm">Please try again later</p>
+              </div>
+            ) : sortedCars.length === 0 ? (
               <div className="col-span-full text-center py-20">
                 <Car className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">No cars found matching your criteria</p>
               </div>
             ) : null}
-            {displayCars.map((car: any) => (
+            {sortedCars.map((car: any) => (
               <Link key={car.id} href={`/listing/${car.id}`}>
                 <div className={cn(
                   "group bg-card rounded-xl overflow-hidden border border-border hover:border-accent/50 hover:shadow-lg transition-all duration-300 cursor-pointer flex",

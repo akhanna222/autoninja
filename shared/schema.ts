@@ -36,6 +36,8 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").default(false),
   displayPhoneInAd: boolean("display_phone_in_ad").default(false),
   allowEmailContact: boolean("allow_email_contact").default(true),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

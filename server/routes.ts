@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
 import { insertCarAlertSchema, insertCarSchema } from "@shared/schema";
 import { checkAndNotifyMatches } from "./alertMatcher";
-import { processCarSearchChat, type CarSearchFilters } from "./openai";
+import { processCarSearchChat, extractLogbookData, verifyLogbookData, type CarSearchFilters, type LogbookData } from "./openai";
 import { stripeService } from "./stripeService";
 import { getStripePublishableKey } from "./stripeClient";
 import multer from "multer";
@@ -312,7 +312,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const carId = parseInt(req.params.id);
       const userId = req.session.userId;
-      const { docType } = req.body;
+      const { docType, processOCR } = req.body;
 
       // Verify car ownership
       const car = await storage.getCar(carId);
@@ -331,12 +331,53 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         fileUrl,
       });
 
-      // If logbook uploaded, mark as verified
-      if (docType === 'logbook') {
+      let ocrData: LogbookData | null = null;
+      let verificationResult: { isVerified: boolean; matchPercentage: number; mismatches: string[] } | null = null;
+
+      // If logbook uploaded and OCR requested, process with OpenAI Vision
+      if (docType === 'logbook' && processOCR === 'true') {
+        try {
+          // Extract data from logbook using OCR
+          const filePath = path.join(process.cwd(), fileUrl);
+          const fileBuffer = fs.readFileSync(filePath);
+          const base64Image = fileBuffer.toString('base64');
+
+          ocrData = await extractLogbookData(base64Image, file.mimetype);
+
+          // Verify extracted data against car listing
+          verificationResult = verifyLogbookData(ocrData, {
+            make: car.make,
+            model: car.model,
+            year: car.year,
+            registration: car.registration || undefined
+          });
+
+          // Update car with verified status and extracted data if verification passes
+          const updateData: any = { logbookVerified: verificationResult.isVerified };
+
+          // Auto-fill missing car data from logbook if verification is high confidence
+          if (verificationResult.matchPercentage >= 75) {
+            if (ocrData.owners && !car.owners) updateData.owners = ocrData.owners;
+            if (ocrData.color && !car.color) updateData.color = ocrData.color;
+            if (ocrData.engineSize && !car.engineSize) updateData.engineSize = ocrData.engineSize;
+          }
+
+          await storage.updateCar(carId, userId, updateData);
+        } catch (ocrError) {
+          console.error("OCR processing error:", ocrError);
+          // Continue without OCR if it fails, just mark as uploaded
+          await storage.updateCar(carId, userId, { logbookVerified: false });
+        }
+      } else if (docType === 'logbook') {
+        // If no OCR, just mark as verified (manual verification assumed)
         await storage.updateCar(carId, userId, { logbookVerified: true });
       }
 
-      res.status(201).json(document);
+      res.status(201).json({
+        document,
+        ocrData,
+        verificationResult
+      });
     } catch (error) {
       console.error("Error uploading document:", error);
       res.status(500).json({ message: "Failed to upload document" });
