@@ -32,6 +32,10 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   phoneNumber: varchar("phone_number"),
+  county: varchar("county"),
+  emailVerified: boolean("email_verified").default(false),
+  displayPhoneInAd: boolean("display_phone_in_ad").default(false),
+  allowEmailContact: boolean("allow_email_contact").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -44,6 +48,36 @@ export const insertUserSchema = createInsertSchema(users).omit({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// Email verification codes
+export const emailVerificationCodes = pgTable("email_verification_codes", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  email: varchar("email").notNull(),
+  code: varchar("code").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertEmailVerificationCodeSchema = createInsertSchema(emailVerificationCodes).omit({ id: true });
+export type InsertEmailVerificationCode = z.infer<typeof insertEmailVerificationCodeSchema>;
+export type EmailVerificationCode = typeof emailVerificationCodes.$inferSelect;
+
+// Seller memberships (annual subscription)
+export const sellerMemberships = pgTable("seller_memberships", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  status: varchar("status").default("pending"), // 'pending', 'active', 'cancelled', 'expired'
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSellerMembershipSchema = createInsertSchema(sellerMemberships).omit({ id: true });
+export type InsertSellerMembership = z.infer<typeof insertSellerMembershipSchema>;
+export type SellerMembership = typeof sellerMemberships.$inferSelect;
 
 // Car Alerts table - stores user preferences for car notifications
 export const carAlerts = pgTable("car_alerts", {
@@ -78,19 +112,31 @@ export type CarAlert = typeof carAlerts.$inferSelect;
 export const cars = pgTable("cars", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   sellerId: varchar("seller_id").references(() => users.id, { onDelete: 'cascade' }),
+  vehicleType: varchar("vehicle_type").default("Car"), // 'Car', 'Van', 'Bike', 'Truck'
+  registration: varchar("registration"),
   make: varchar("make").notNull(),
   model: varchar("model").notNull(),
+  derivative: varchar("derivative"), // e.g. "520d SE 5C12 4DR AUTO"
   year: integer("year").notNull(),
   price: integer("price").notNull(),
   mileage: integer("mileage").notNull(),
+  mileageUnit: varchar("mileage_unit").default("km"), // 'km', 'miles'
   location: varchar("location").notNull(),
+  county: varchar("county"),
   fuelType: varchar("fuel_type").notNull(),
   transmission: varchar("transmission").notNull(),
+  engineSize: varchar("engine_size"), // e.g. "2.0"
   title: varchar("title"),
   description: text("description"),
   bodyType: varchar("body_type"),
   color: varchar("color"),
   condition: varchar("condition"),
+  numberOfDoors: integer("number_of_doors"),
+  numberOfSeats: integer("number_of_seats"),
+  nctExpiry: varchar("nct_expiry"), // Month/Year e.g. "12/2025"
+  nctExpired: boolean("nct_expired").default(false),
+  taxBand: varchar("tax_band"), // e.g. "€200 (Band A4)"
+  features: text("features").array(), // Array of feature strings
   imageUrl: text("image_url"),
   verificationScore: integer("verification_score").default(0),
   logbookVerified: boolean("logbook_verified").default(false),
@@ -101,6 +147,8 @@ export const cars = pgTable("cars", {
   accidents: boolean("accidents").default(false),
   finance: boolean("finance").default(false),
   serviceHistory: varchar("service_history").default("None"),
+  status: varchar("status").default("draft"), // 'draft', 'pending_payment', 'active', 'sold', 'expired'
+  isPaid: boolean("is_paid").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
