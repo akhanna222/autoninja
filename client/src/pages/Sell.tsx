@@ -125,15 +125,50 @@ export default function Sell() {
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+
+    // Validate file count
     if (files.length + images.length > 20) {
       toast({ title: "Too many images", description: "Maximum 20 images allowed", variant: "destructive" });
       return;
     }
+
+    // Validate file sizes and types
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
+    for (const file of files) {
+      if (file.size > maxSize) {
+        toast({
+          title: "File too large",
+          description: `${file.name} is larger than 10MB. Please compress it first.`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!validTypes.includes(file.type)) {
+        toast({
+          title: "Invalid file type",
+          description: `${file.name} is not a supported image format. Use JPEG, PNG, or WebP.`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     const newImages = [...images, ...files];
     setImages(newImages);
+
     files.forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => setImagePreviews(prev => [...prev, reader.result as string]);
+      reader.onerror = () => {
+        toast({
+          title: "Error reading file",
+          description: `Failed to read ${file.name}`,
+          variant: "destructive"
+        });
+      };
       reader.readAsDataURL(file);
     });
   };
@@ -187,22 +222,48 @@ export default function Sell() {
 
   const handleNext = async () => {
     if (step === 1) {
+      // Validate required fields
       if (!formData.make || !formData.model || !formData.year || !formData.mileage) {
-        toast({ title: "Missing Information", description: "Please fill in all required fields", variant: "destructive" });
+        toast({ title: "Missing Information", description: "Please fill in all required fields (Make, Model, Year, Mileage)", variant: "destructive" });
         return;
       }
+
+      // Validate data types
+      if (formData.mileage <= 0) {
+        toast({ title: "Invalid Mileage", description: "Mileage must be greater than 0", variant: "destructive" });
+        return;
+      }
+
+      if (formData.year < 1900 || formData.year > new Date().getFullYear() + 1) {
+        toast({ title: "Invalid Year", description: "Please enter a valid year", variant: "destructive" });
+        return;
+      }
+
       setStep(2);
     } else if (step === 2) {
+      // Validate step 2 fields
       if (!formData.price || !formData.county || !formData.email) {
         toast({ title: "Missing Information", description: "Please fill in price, county, and email", variant: "destructive" });
         return;
       }
-      
+
+      if (formData.price <= 0) {
+        toast({ title: "Invalid Price", description: "Price must be greater than 0", variant: "destructive" });
+        return;
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        toast({ title: "Invalid Email", description: "Please enter a valid email address", variant: "destructive" });
+        return;
+      }
+
       if (!user) {
         setShowAuthModal(true);
         return;
       }
-      
+
       // Create the car listing
       setIsLoading(true);
       try {
@@ -213,14 +274,27 @@ export default function Sell() {
         };
         await createCarMutation.mutateAsync(carData);
         setStep(3);
-      } catch (err) {
-        // Error handled by mutation
+      } catch (err: any) {
+        toast({
+          title: "Error Creating Listing",
+          description: err?.message || "Failed to create listing. Please try again.",
+          variant: "destructive"
+        });
       }
       setIsLoading(false);
     } else if (step === 3) {
+      // Upload images if any
       if (createdCarId && images.length > 0) {
         setIsLoading(true);
-        await uploadImagesMutation.mutateAsync({ carId: createdCarId, files: images });
+        try {
+          await uploadImagesMutation.mutateAsync({ carId: createdCarId, files: images });
+        } catch (err: any) {
+          toast({
+            title: "Error Uploading Images",
+            description: err?.message || "Some images failed to upload",
+            variant: "destructive"
+          });
+        }
         setIsLoading(false);
       }
       setStep(4);
