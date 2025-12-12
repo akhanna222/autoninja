@@ -35,7 +35,7 @@ export default function Home() {
               Trust Driven. <span className="text-accent">Verified.</span>
             </h1>
             <p className="text-xl md:text-2xl text-white/80 max-w-2xl mx-auto mb-10 font-light">
-              The new standard in buying and selling. Every car verified by AI, every mile checked, every photo authenticated.
+              The new standard in buying and selling used cars. Every car verified by AI, every mile checked, every photo authenticated.
             </p>
           </motion.div>
 

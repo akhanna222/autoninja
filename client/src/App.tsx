@@ -12,6 +12,7 @@ import Listing from "@/pages/Listing";
 import Sell from "@/pages/Sell";
 import MyAlerts from "@/pages/MyAlerts";
 import AuthPage from "@/pages/AuthPage";
+import About from "@/pages/About";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -20,6 +21,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
+      <Route path="/about" component={About} />
       {isLoading || !isAuthenticated ? (
         <>
           <Route path="/" component={Landing} />

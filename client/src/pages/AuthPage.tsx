@@ -92,13 +92,13 @@ export default function AuthPage() {
           <div className="text-white text-center px-12">
             <div className="flex items-center justify-center gap-3 mb-6">
               <ShieldCheck className="h-12 w-12 text-accent" />
-              <span className="text-4xl font-heading font-bold">Carzone</span>
+              <span className="text-4xl font-heading font-bold">AutoNinja</span>
             </div>
             <h2 className="text-3xl font-heading font-bold mb-4">
               Trust Driven. <span className="text-accent">Verified.</span>
             </h2>
             <p className="text-lg text-white/80">
-              Join thousands of buyers and sellers who trust Carzone for verified, transparent car transactions.
+              Join thousands of buyers and sellers who trust AutoNinja for verified, transparent car transactions.
             </p>
           </div>
         </div>
@@ -115,7 +115,7 @@ export default function AuthPage() {
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
             <ShieldCheck className="h-8 w-8 text-accent" />
-            <span className="text-2xl font-heading font-bold text-primary">Carzone</span>
+            <span className="text-2xl font-heading font-bold text-primary">AutoNinja</span>
           </div>
 
           <Card className="border-0 shadow-xl">

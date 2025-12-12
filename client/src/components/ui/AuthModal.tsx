@@ -98,7 +98,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
         <div className="bg-primary p-6 text-white text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <ShieldCheck className="h-8 w-8 text-accent" />
-            <span className="text-2xl font-heading font-bold">Carzone</span>
+            <span className="text-2xl font-heading font-bold">AutoNinja</span>
           </div>
           <DialogDescription className="text-white/80">
             Sign in to save alerts and list your car

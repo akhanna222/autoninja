@@ -39,9 +39,11 @@ export default function Navbar() {
     { href: "/search", label: "Buy" },
     { href: "/sell", label: "Sell" },
     { href: "/alerts", label: "My Alerts" },
+    { href: "/about", label: "About" },
   ] : [
     { href: "/search", label: "Buy" },
     { href: "/sell", label: "Sell" },
+    { href: "/about", label: "About" },
   ];
 
   return (
@@ -63,7 +65,7 @@ export default function Navbar() {
               "font-heading font-bold text-xl tracking-tight transition-colors", 
               isHome && !scrolled ? "text-white" : "text-foreground"
             )}>
-              CARZONE
+              AUTONINJA
             </span>
         </Link>
 
@@ -129,7 +131,7 @@ export default function Navbar() {
                 onClick={() => setAuthModalOpen(true)}
                 className="bg-accent hover:bg-accent/90 text-white border-0 font-medium px-6"
               >
-                Sign In
+                Sign Up / Sign In
               </Button>
               <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
             </>
