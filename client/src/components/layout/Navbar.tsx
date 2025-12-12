@@ -8,10 +8,12 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import AuthModal from "@/components/ui/AuthModal";
 
 export default function Navbar() {
   const [location, setLocation] = useLocation();
   const [scrolled, setScrolled] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const isHome = location === "/";
   const { user, isAuthenticated } = useAuth();
 
@@ -122,11 +124,15 @@ export default function Navbar() {
               </Link>
             </>
           ) : (
-            <Link href="/auth">
-              <Button className="bg-accent hover:bg-accent/90 text-white border-0 font-medium px-6">
+            <>
+              <Button 
+                onClick={() => setAuthModalOpen(true)}
+                className="bg-accent hover:bg-accent/90 text-white border-0 font-medium px-6"
+              >
                 Sign In
               </Button>
-            </Link>
+              <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
+            </>
           )}
         </div>
 
@@ -153,9 +159,12 @@ export default function Navbar() {
                     <Button variant="outline" className="w-full" onClick={handleLogout}>Logout</Button>
                   </>
                 ) : (
-                  <Link href="/auth">
-                    <Button className="w-full bg-accent text-white">Sign In</Button>
-                  </Link>
+                  <Button 
+                    className="w-full bg-accent text-white"
+                    onClick={() => setAuthModalOpen(true)}
+                  >
+                    Sign In
+                  </Button>
                 )}
               </div>
             </SheetContent>

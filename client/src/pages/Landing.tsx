@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { ShieldCheck, Car, History, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,8 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Link } from "wouter";
 import heroImage from "@assets/generated_images/modern_luxury_car_in_minimalist_garage.png";
 import shieldImage from "@assets/generated_images/abstract_verification_shield_icon.png";
+import AuthModal from "@/components/ui/AuthModal";
 
 export default function Landing() {
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -82,13 +86,18 @@ export default function Landing() {
             </div>
             <div className="mt-6 pt-4 border-t border-white/10 text-center">
               <span className="text-white/60 text-sm">New to Carzone? </span>
-              <Link href="/auth" className="text-accent hover:text-accent/80 text-sm font-medium">
+              <button 
+                onClick={() => setAuthModalOpen(true)} 
+                className="text-accent hover:text-accent/80 text-sm font-medium"
+              >
                 Sign up for free
-              </Link>
+              </button>
               <span className="text-white/60 text-sm"> to save alerts and list your car</span>
             </div>
           </motion.div>
         </div>
+
+        <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
       </section>
 
       {/* Trust Indicators */}
